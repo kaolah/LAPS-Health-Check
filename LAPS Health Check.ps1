@@ -1,4 +1,4 @@
-﻿param(
+param(
 [Switch]$SendMessage=$true
 )
  
@@ -79,11 +79,17 @@ ENROLLED
 $($PermissionReport | Format-Table | Out-String)
 "@
 
-
-$FileDate = (Get-Date).tostring("MM-dd-yyyy-hh-mm-ss")             
-$Filename=$Fileshare+'\'+$Filedate+'LAPSReport.txt'
+#Export to file reports 
+$FileDate = (Get-Date).tostring("dd-MM-yyyy-hh-mm-ss")             
+$Filename=$Fileshare+'\'+$Filedate+'_LAPSReport.txt'
 
 Add-Content -Value $Content -Path $Filename
+
+$EnrolledCSV = $Fileshare+'\'+$Filedate+'_LAPS_Enrolled.csv'
+$NonEnrolledCSV = $Fileshare+'\'+$Filedate+'_LAPS_Non_Enrolled.csv'
+
+$PermissionReport | Export-Csv $EnrolledCSV -NoClobber -NoTypeInformation 
+$nonEnrolledComputers | select 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem | Export-Csv $NonEnrolledCSV -NoClobber -NoTypeInformation 
 
 If ($SendMessage)
 { 
@@ -95,5 +101,5 @@ $EmailSubject = 'LAPS Health Report for ' + $today.ToShortDateString()
 $EmailBody=$Content
 $smtpserver= "dc3.ko.sk"  
 
-Send-MailMessage -Body $EmailBody -From $EmailFrom -To $EmailTo -Subject $EmailSubject -SmtpServer $smtpserver  
+Send-MailMessage -Body $EmailBody -From $EmailFrom -To $EmailTo -Subject $EmailSubject -SmtpServer $smtpserver -Attachments $EnrolledCSV,$NonEnrolledCSV 
 } 
