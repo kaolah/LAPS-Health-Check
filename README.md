@@ -6,4 +6,4 @@ Script LAPS Health Check will show you all details for all computers in your env
   - Is password changed regularly?
   - List of not enrolled computers
   - List of enrolled computers with stale password
-  - List of enrolled computers with all users/groups who can read LAP password   
+  - List of enrolled computers with all users/groups who can read LAPS password   
