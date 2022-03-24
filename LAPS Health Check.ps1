@@ -41,19 +41,20 @@ $IdentityRef = ((Get-Acl -path "AD:$CompName").access | Where {(($_.ActiveDirect
 -or ( $_.ObjectType -eq '00000000-0000-0000-0000-000000000000') )) -or ($_.ActiveDirectoryRights -like "*GenericAll*") `
 )}).IdentityReference 
 
-$Obj = "" | Select Name,CanonicalName,LastLogon,PwdLastSet,LAPS_PWD,OperatingSystem,Identity  
+$Obj = "" | Select Name,CanonicalName,LastLogon,PwdLastSet,LAPS_PWD,OperatingSystem,Enabled,Identity 
 $obj.Name = $computer.Name
 $obj.CanonicalName = $computer.CanonicalName
 $obj.LastLogon = [datetime]::FromFileTime($computer.lastlogontimestamp).tostring("dd-MM-yyy")
 $obj.PwdLastSet = [datetime]::FromFileTime($computer.pwdlastset).tostring("dd-MM-yyy")
 $obj.LAPS_PWD = [datetime]::FromFileTime($computer.'ms-MCS-AdmPwdExpirationTime').tostring("dd-MM-yyy")
 $obj.OperatingSystem = $computer.OperatingSystem
+$obj.Enabled = $computer.Enabled
 $obj.Identity = $IdentityRef
 
 $Output += $Obj 
 }
 
-$PermissionReport = $output | select Name,CanonicalName,LastLogon,PwdLastSet,LAPS_PWD,OperatingSystem,Enabled @{Name=’WhoCanReadLAPSPwd’;Expression={[string]::join(" ; ", ($_.Identity))}} 
+$PermissionReport = $output | select Name,CanonicalName,LastLogon,PwdLastSet,LAPS_PWD,OperatingSystem,Enabled, @{Name=’WhoCanReadLAPSPwd’;Expression={[string]::join(" ; ", ($_.Identity))}} 
  
 #Write the LAPS information (summary and detail) to a temporary file in the previously specified share 
 $Content=@"
