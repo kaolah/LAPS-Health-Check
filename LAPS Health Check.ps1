@@ -16,7 +16,7 @@ $maxAgeDays=30
 $ts=[DateTime]::Now.AddDays(0-$maxAgeDays).ToFileTimeUtc().ToString() 
  
 #LDAP queries for LAPS statistics 
-$Computers = Get-ADComputer -Filter * -Server dc3.ko.sk -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem'
+$Computers = Get-ADComputer -Filter * -Server dc3.ko.sk -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled'
 
 $enrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -ne $null}
 $nonEnrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -eq $null}
@@ -53,7 +53,7 @@ $obj.Identity = $IdentityRef
 $Output += $Obj 
 }
 
-$PermissionReport = $output | select Name,CanonicalName,LastLogon,PwdLastSet,LAPS_PWD,OperatingSystem, @{Name=’WhoCanReadLAPSPwd’;Expression={[string]::join(" ; ", ($_.Identity))}} 
+$PermissionReport = $output | select Name,CanonicalName,LastLogon,PwdLastSet,LAPS_PWD,OperatingSystem,Enabled @{Name=’WhoCanReadLAPSPwd’;Expression={[string]::join(" ; ", ($_.Identity))}} 
  
 #Write the LAPS information (summary and detail) to a temporary file in the previously specified share 
 $Content=@"
@@ -68,11 +68,11 @@ DETAILS
 
 NOT ENROLLED
 ------------
-$($nonEnrolledComputers | ft 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem | Out-String) 
+$($nonEnrolledComputers | ft 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem,Enabled | Out-String) 
 
 EXPIRED
 -------
-$($expiredNotRefreshed | ft 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem | Out-String)
+$($expiredNotRefreshed | ft 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem, Enabled | Out-String)
 
 ENROLLED
 --------
@@ -89,7 +89,7 @@ $EnrolledCSV = $Fileshare+'\'+$Filedate+'_LAPS_Enrolled.csv'
 $NonEnrolledCSV = $Fileshare+'\'+$Filedate+'_LAPS_Non_Enrolled.csv'
 
 $PermissionReport | Export-Csv $EnrolledCSV -NoClobber -NoTypeInformation 
-$nonEnrolledComputers | select 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem | Export-Csv $NonEnrolledCSV -NoClobber -NoTypeInformation 
+$nonEnrolledComputers | select 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem,Enabled | Export-Csv $NonEnrolledCSV -NoClobber -NoTypeInformation 
 
 If ($SendMessage)
 { 
