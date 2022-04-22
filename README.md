@@ -18,3 +18,5 @@ You can modify the script to fit your needs.
 
 
 google-site-verification: google79d093eb3d8e0cd9.html
+
+<meta name="google-site-verification" content="j9MpPd23ULNfwCG-hiPwp1wX72ax7C4GE3KJWxSprnU" />
