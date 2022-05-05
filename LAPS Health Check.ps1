@@ -11,16 +11,15 @@ $Server="dc3.ko.sk"
 #Edit the following variable to specify the share to store the output. 
 $fileshare="c:\temp" 
  
-#Edit the following variable, if necessary, to match the LAPS group policy for the age of passwords (default is 30)
-$maxAgeDays=30 
-$ts=[DateTime]::Now.AddDays(0-$maxAgeDays).ToFileTimeUtc().ToString() 
+#Edit the following variable, if necessary, every computer which LAPS password expired yesterday will appear on expired list
+$ts=[DateTime]::Now.AddDays(-1).ToFileTimeUtc().ToString() 
  
 #LDAP queries for LAPS statistics 
 $Computers = Get-ADComputer -Filter * -Server $Server -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled'
 
 $enrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -ne $null}
 $nonEnrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -eq $null}
-$expiredNotRefreshed = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -gt $null}
+$expiredNotRefreshed = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -lt $ts -and $_.'ms-MCS-AdmPwdExpirationTime' -ne $null}
 
 #Permission check 
 # get the 'ms-Mcs-AdmPwd' Schema Guid 
@@ -88,9 +87,12 @@ Add-Content -Value $Content -Path $Filename
 
 $EnrolledCSV = $Fileshare+'\'+$Filedate+'_LAPS_Enrolled.csv'
 $NonEnrolledCSV = $Fileshare+'\'+$Filedate+'_LAPS_Non_Enrolled.csv'
+$ExpiredCSV = $Fileshare+'\'+$Filedate+'_LAPS_Expired.csv'
 
 $PermissionReport | Export-Csv $EnrolledCSV -NoClobber -NoTypeInformation 
 $nonEnrolledComputers | select 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem,Enabled | Export-Csv $NonEnrolledCSV -NoClobber -NoTypeInformation 
+$expiredNotRefreshed | select 'Name','CanonicalName',@{l=’LastLogon’; e={[datetime]::FromFileTime($_.lastlogontimestamp).ToString("dd-MM-yyyy")}},@{l=’PwdLastSet’; e={[datetime]::FromFileTime($_.'pwdLastSet').ToString("dd-MM-yyyy") }},@{l=’LAPS_PWD’; e={[datetime]::FromFileTime($_.'ms-Mcs-AdmPwdExpirationTime').ToString("dd-MM-yyyy") }},OperatingSystem,Enabled | Export-Csv $ExpiredCSV -NoClobber -NoTypeInformation 
+
 
 If ($SendMessage)
 { 
@@ -102,5 +104,5 @@ $EmailSubject = 'LAPS Health Report for ' + $today.ToShortDateString()
 $EmailBody=$Content
 $smtpserver= "dc3.ko.sk"  
 
-Send-MailMessage -Body $EmailBody -From $EmailFrom -To $EmailTo -Subject $EmailSubject -SmtpServer $smtpserver -Attachments $EnrolledCSV,$NonEnrolledCSV 
+Send-MailMessage -Body $EmailBody -From $EmailFrom -To $EmailTo -Subject $EmailSubject -SmtpServer $smtpserver -Attachments $EnrolledCSV,$NonEnrolledCSV,$ExpiredCSV 
 } 
