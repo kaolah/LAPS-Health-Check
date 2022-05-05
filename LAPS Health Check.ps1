@@ -16,7 +16,7 @@ $maxAgeDays=30
 $ts=[DateTime]::Now.AddDays(0-$maxAgeDays).ToFileTimeUtc().ToString() 
  
 #LDAP queries for LAPS statistics 
-$Computers = Get-ADComputer -Filter * -Server dc3.ko.sk -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled'
+$Computers = Get-ADComputer -Filter * -Server $Server -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled'
 
 $enrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -ne $null}
 $nonEnrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -eq $null}
