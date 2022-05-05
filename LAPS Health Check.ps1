@@ -4,6 +4,9 @@ param(
  
 #Edit the following variable to specify the domain or OU to search (e.g. workstations or servers) 
 $searchBase="dc=ko,dc=sk" 
+
+#Specify exclusions for OUs which should be skipped, use distinguished name separated by | 
+$exclusions = "OU=Domain Controllers,DC=KO,DC=SK|OU=ToBeDeleted,OU=KO,DC=KO,DC=SK|OU=Clusters,OU=KO,DC=KO,DC=SK" 
  
 #Edit the following variable to specify the LDAP server to use. Using domain name will select any DC in the domain 
 $Server="dc3.ko.sk" 
@@ -15,7 +18,14 @@ $fileshare="c:\temp"
 $ts=[DateTime]::Now.AddDays(-1).ToFileTimeUtc().ToString() 
  
 #LDAP queries for LAPS statistics 
-$Computers = Get-ADComputer -Filter * -Server $Server -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled'
+if ($exclusions -eq "") {
+
+    $Computers = Get-ADComputer -Filter * -Server $Server -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled' 
+    }
+
+else {
+    $Computers = Get-ADComputer -Filter * -Server $Server -SearchBase $searchBase -Properties 'canonicalname','lastlogontimestamp','pwdlastset','ms-Mcs-AdmPwdExpirationTime','OperatingSystem','Enabled' | where {$_.DistinguishedName -notmatch $exclusions}
+    }
 
 $enrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -ne $null}
 $nonEnrolledComputers = $Computers | where {$_.'ms-MCS-AdmPwdExpirationTime' -eq $null}
